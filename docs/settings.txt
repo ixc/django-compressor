@@ -219,11 +219,11 @@ Backend settings
 
     #. command
         The command to call on each of the files. Modern Python string
-        formatting will be provided for the two placeholders ``{infile}`` and
-        ``{outfile}`` whose existence in the command string also triggers the
-        actual creation of those temporary files. If not given in the command
-        string, Django Compressor will use ``stdin`` and ``stdout`` respectively
-        instead.
+        formatting will be provided for the placeholders ``{infile}``,
+        ``{inpath}`` and ``{outfile}`` whose existence in the command string
+        also triggers the actual creation of those temporary files. If not given
+        in the command string, Django Compressor will use ``stdin`` and
+        ``stdout`` respectively instead.
 
     Example::
 
