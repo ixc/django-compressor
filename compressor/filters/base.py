@@ -108,6 +108,9 @@ class CompilerFilter(FilterBase):
                     self.infile = open(self.filename)
                     options["infile"] = self.filename
 
+        if "{inpath}" in self.command:
+            options["inpath"] = os.path.dirname(os.path.abspath(options["infile"]))
+
         if "{outfile}" in self.command and not "outfile" in options:
             ext = self.type and ".%s" % self.type or ""
             self.outfile = NamedTemporaryFile(mode='r+', suffix=ext)
