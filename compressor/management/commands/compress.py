@@ -115,7 +115,7 @@ class Command(NoArgsCommand):
                 "COMPRESS_ENABLED setting is not True.", dest='force'),
         make_option('--follow-links', default=False, action='store_true',
             help="Follow symlinks when traversing the COMPRESS_ROOT "
-                "(which defaults to MEDIA_ROOT). Be aware that using this "
+                "(which defaults to STATIC_ROOT). Be aware that using this "
                 "can lead to infinite recursion if a link points to a parent "
                 "directory of itself.", dest='follow_links'),
     )
@@ -291,9 +291,8 @@ class Command(NoArgsCommand):
         return count, results
 
     def get_nodelist(self, node):
-        if (isinstance(node, IfNode) and
-                hasattr(node, 'nodelist_true') and
-                hasattr(node, 'nodelist_false')):
+        # Check if node is an ```if``` switch with true and false branches
+        if hasattr(node, 'nodelist_true') and hasattr(node, 'nodelist_false'):
             return node.nodelist_true + node.nodelist_false
         return getattr(node, "nodelist", [])
 
