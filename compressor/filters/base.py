@@ -1,6 +1,7 @@
 from __future__ import absolute_import, unicode_literals
 import io
 import logging
+import os
 import subprocess
 
 from django.core.exceptions import ImproperlyConfigured
@@ -125,9 +126,6 @@ class CompilerFilter(FilterBase):
         encoding = self.default_encoding
         options = dict(self.options)
 
-        if "{inpath}" in self.command:
-            options["inpath"] = os.path.dirname(os.path.abspath(options["infile"]))
-
         if self.infile is None and "{infile}" in self.command:
             # create temporary input file if needed
             if self.filename is None:
@@ -143,6 +141,9 @@ class CompilerFilter(FilterBase):
                 encoding = self.charset  # or self.default_encoding
                 self.infile = open(self.filename)
                 options["infile"] = self.filename
+
+        if "{inpath}" in self.command:
+            options["inpath"] = os.path.dirname(os.path.abspath(options["infile"]))
 
         if "{outfile}" in self.command and "outfile" not in options:
             # create temporary output file if needed
