@@ -2,8 +2,14 @@ from __future__ import unicode_literals
 import os
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.template.utils import InvalidTemplateEngineError
 
 from appconf import AppConf
+
+
+default_filters = dict(
+    css=['compressor.filters.css_default.CssAbsoluteFilter'],
+    js=['compressor.filters.jsmin.JSMinFilter'])
 
 
 class CompressorConf(AppConf):
@@ -18,16 +24,21 @@ class CompressorConf(AppConf):
     OUTPUT_DIR = 'CACHE'
     STORAGE = 'compressor.storage.CompressorFileStorage'
 
-    CSS_COMPRESSOR = 'compressor.css.CssCompressor'
-    JS_COMPRESSOR = 'compressor.js.JsCompressor'
+    COMPRESSORS = dict(
+        css='compressor.css.CssCompressor',
+        js='compressor.js.JsCompressor',
+    )
 
     URL = None
     ROOT = None
 
-    CSS_FILTERS = ['compressor.filters.css_default.CssAbsoluteFilter']
+    # Filters are resolved in configure()
+    FILTERS = {}
+    CSS_FILTERS = None
+    JS_FILTERS = None
+
     CSS_HASHING_METHOD = 'mtime'
 
-    JS_FILTERS = ['compressor.filters.jsmin.JSMinFilter']
     PRECOMPILERS = (
         # ('text/coffeescript', 'coffee --compile --stdio'),
         # ('text/less', 'lessc {infile} {outfile}'),
@@ -35,16 +46,17 @@ class CompressorConf(AppConf):
         # ('text/stylus', 'stylus < {infile} > {outfile}'),
         # ('text/x-scss', 'sass --scss {infile} {outfile}'),
     )
+    CACHEABLE_PRECOMPILERS = ()
     CLOSURE_COMPILER_BINARY = 'java -jar compiler.jar'
     CLOSURE_COMPILER_ARGUMENTS = ''
-    CSSTIDY_BINARY = 'csstidy'
-    CSSTIDY_ARGUMENTS = '--template=highest'
     YUI_BINARY = 'java -jar yuicompressor.jar'
     YUI_CSS_ARGUMENTS = ''
     YUI_JS_ARGUMENTS = ''
     YUGLIFY_BINARY = 'yuglify'
     YUGLIFY_CSS_ARGUMENTS = '--terminal'
     YUGLIFY_JS_ARGUMENTS = '--terminal'
+    CLEAN_CSS_BINARY = 'cleancss'
+    CLEAN_CSS_ARGUMENTS = ''
     DATA_URI_MAX_SIZE = 1024
 
     # the cache backend to use
@@ -68,11 +80,22 @@ class CompressorConf(AppConf):
     OFFLINE_MANIFEST = 'manifest.json'
     # The Context to be used when TemplateFilter is used
     TEMPLATE_FILTER_CONTEXT = {}
-    # Function that returns the Jinja2 environment to use in offline compression.
+    # Placeholder to be used instead of settings.COMPRESS_URL during offline compression.
+    # Affects manifest file contents only.
+    URL_PLACEHOLDER = '/__compressor_url_placeholder__/'
+
+    # Returns the Jinja2 environment to use in offline compression.
     def JINJA2_GET_ENVIRONMENT():
+        alias = 'jinja2'
         try:
-            import jinja2
-            return jinja2.Environment()
+            from django.template import engines
+            return engines[alias].env
+        except InvalidTemplateEngineError:
+            raise InvalidTemplateEngineError(
+                "Could not find config for '{}' "
+                "in settings.TEMPLATES. "
+                "COMPRESS_JINJA2_GET_ENVIRONMENT() may "
+                "need to be defined in settings".format(alias))
         except ImportError:
             return None
 
@@ -118,3 +141,27 @@ class CompressorConf(AppConf):
                                        "must be a list or tuple. Check for "
                                        "missing commas.")
         return value
+
+    def configure(self):
+        data = self.configured_data
+        for kind in {'css', 'js'}:
+            setting_name = '%s_FILTERS' % kind.upper()
+            filters = data.pop(setting_name)
+            if filters is not None:
+                # filters for this kind are set using <kind>_FILTERS
+                if kind in data['FILTERS']:
+                    raise ImproperlyConfigured(
+                        "The setting {kind_setting} "
+                        "conflicts with {main_setting}['{kind}']. "
+                        "Remove either setting and update the other to "
+                        "the correct list of filters for {kind} resources"
+                        ", we recommend you keep the latter."
+                        .format(
+                            kind_setting=self._meta.prefixed_name(setting_name),
+                            main_setting=self._meta.prefixed_name('FILTERS'),
+                            kind=kind))
+                data['FILTERS'][kind] = filters
+            elif kind not in data['FILTERS']:
+                # filters are not defined
+                data['FILTERS'][kind] = default_filters[kind]
+        return data

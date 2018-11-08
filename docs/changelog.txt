@@ -1,12 +1,143 @@
 Changelog
 =========
 
-v1.4
-----
+Unreleased
+-------------------
+
+- Drop support for Django 1.8, 1.9 and 1.10
+- Add Django 2.0, Django 2.1, and Python 3.7 support
+- Update all dependencies. This required minor code changes, you might need to update some optional dependencies if you use any
+- Allow the mixed use of JS/CSS in Sekizai's templatetags `{% addtoblock "js" %}` and `{% addtoblock "css" %}`.
+
+v2.2 (2017-08-16)
+-------------------
+
+`Full Changelog <https://github.com/django-compressor/django-compressor/compare/2.1.1...2.2>`_
+
+- Switch from MD5 to SHA256 for hashes generation.
+
+- Add Django 1.11 compatibility
+
+- Various compatibility fixes for Python 3.6 and Django 1.8
+
+- Made OfflineGenerationError easier to debug
+
+- Drop support for Python 3.2
+
+- Add new CssRelativeFilter which works like CssAbsoluteFilter but outputs relative URLs.
+
+- Fix URL CssAbsoluteFilter URL detection
+
+v2.1.1 (2017-02-02)
+-------------------
+
+- Fix to file permissions issue with packaging.
+
+
+v2.1 (2016-08-09)
+-----------------
+
+`Full Changelog <https://github.com/django-compressor/django-compressor/compare/2.0...2.1>`_
+
+- Add Django 1.10 compatibility
+
+- Add support for inheritance using a variable in offline compression
+
+- Fix recursion error with offline compression when extending templates with the same name
+
+- Fix UnicodeDecodeError when using CompilerFilter and caching
+
+- Fix CssAbsoluteFilter changing double quotes to single quotes, breaking SVG
+
+
+v2.0 (2016-01-07)
+-----------------
+
+`Full Changelog <https://github.com/django-compressor/django-compressor/compare/1.6...2.0>`_
+
+- Add Django 1.9 compatibility
+
+- Remove official support for Django 1.4 and 1.7
+
+- Add official support for Python 3.5
+
+- Remove official support for Python 2.6
+
+- Remove support for coffin and jingo
+
+- Fix Jinja2 compatibility for Django 1.8+
+
+- Stop bundling vendored versions of rcssmin and rjsmin, make them proper dependencies
+
+- Remove support for CSSTidy
+
+- Remove support for beautifulsoup 3.
+
+- Replace cssmin by csscompressor (cssmin is still available for backwards-compatibility but points to rcssmin)
+
+
+v1.6 (2015-11-19)
+-----------------
+
+`Full Changelog <https://github.com/django-compressor/django-compressor/compare/1.5...1.6>`_
+
+- Upgrade rcssmin and rjsmin
+
+- Apply CssAbsoluteFilter to precompiled css even when compression is disabled
+
+- Add optional caching to CompilerFilter to avoid re-compiling unchanged files
+
+- Fix various deprecation warnings on Django 1.7 / 1.8
+
+- Fix TemplateFilter
+
+- Fix double-rendering bug with sekizai extension
+
+- Fix debug mode using destination directory instead of staticfiles finders first
+
+- Removed some silent exception catching in compress command
+
+
+v1.5 (2015-03-27)
+-----------------
+
+`Full Changelog <https://github.com/django-compressor/django-compressor/compare/1.4...1.5>`_
+
+- Fix compress command and run automated tests for Django 1.8
+
+- Fix Django 1.8 warnings
+
+- Handle TypeError from import_module
+
+- Fix reading UTF-8 files which have BOM
+
+- Fix incompatibility with Windows (shell_quote is not supported)
+
+- Run automated tests on Django 1.7
+
+- Ignore non-existent {{ block.super }} in offline compression instead of raising AttributeError
+
+- Support for clean-css
+
+- Fix link markup
+
+- Add support for COMPRESS_CSS_HASHING_METHOD = None
+
+- Remove compatibility with old 'staticfiles' app
+
+- In compress command, use get_template() instead of opening template files manually, fixing compatibility issues with custom template loaders
+
+- Fix FilterBase so that does not override self.type for subclasses if filter_type is not specified at init
+
+- Remove unnecessary filename and existence checks in CssAbsoluteFilter
+
+
+v1.4 (2014-06-20)
+-----------------
 
 - Added Python 3 compatibility.
 
-- Added compatibility with Django 1.6.x.
+- Added compatibility with Django 1.6.x and dropped support for Django 1.3.X.
 
 - Fixed compatibility with html5lib 1.0.
 
@@ -23,7 +154,7 @@ v1.4
 
 - Made ``CssCompressor`` class easier to extend.
 
-- Added support for explictly stating the block being ended.
+- Added support for explicitly stating the block being ended.
 
 - Added rcssmin and updated rjsmin.
 
@@ -38,7 +169,7 @@ v1.4
 
 - Fixed windows line endings in offline compression.
 
-v1.3 (03/18/2013)
+v1.3 (2013-03-18)
 -----------------
 
 - *Backward incompatible changes*
@@ -46,7 +177,7 @@ v1.3 (03/18/2013)
   -  Dropped support for Python 2.5. Removed ``any`` and ``walk`` compatibility
      functions in ``compressor.utils``.
 
-  - Removed compatibility with Django 1.2 for default values of some settings:
+  - Removed compatibility with some old django setttings:
 
     - :attr:`~COMPRESS_ROOT` no longer uses ``MEDIA_ROOT`` if ``STATIC_ROOT`` is
       not defined. It expects ``STATIC_ROOT`` to be defined instead.
@@ -244,7 +375,7 @@ v1.0
 - Added :func:`post_compress<compressor.signals.post_compress>` signal.
 
 .. _`Slim It`: http://slimit.org/
-.. _`django-appconf`: http://django-appconf.rtfd.org/
+.. _`django-appconf`: https://django-appconf.readthedocs.io/
 .. _`versiontools`: http://pypi.python.org/pypi/versiontools
 
 v0.9.2
@@ -334,7 +465,7 @@ v0.6.1
 ------
 
 - Fixed staticfiles support to also use its finder API to find files during
-  developement -- when the static files haven't been collected in
+  development -- when the static files haven't been collected in
   ``STATIC_ROOT``.
 
 - Fixed regression with the ``COMPRESS`` setting, pre-compilation and
@@ -360,7 +491,7 @@ Major improvements and a lot of bugfixes, some of which are:
   compress template tag does. See the
   :ref:`pre-compression <pre-compression>` docs for more information.
 
-- Various perfomance improvements by better caching and mtime cheking.
+- Various performance improvements by better caching and mtime cheking.
 
 - Deprecated ``COMPRESS_LESSC_BINARY`` setting because it's now
   superseded by the :attr:`~django.conf.settings.COMPRESS_PRECOMPILERS`
@@ -383,7 +514,7 @@ Major improvements and a lot of bugfixes, some of which are:
 - Added ``mtime_cache`` management command to add and/or remove all mtimes
   from the cache.
 
-- Moved docs to Read The Docs: http://django-compressor.readthedocs.org/en/latest/
+- Moved docs to Read The Docs: https://django-compressor.readthedocs.io/en/latest/
 
 - Added optional ``compressor.storage.GzipCompressorFileStorage`` storage
   backend that gzips of the saved files automatically for easier deployment.

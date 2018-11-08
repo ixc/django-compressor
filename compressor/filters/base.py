@@ -4,11 +4,27 @@ import logging
 import os
 import subprocess
 
+from importlib import import_module
+from platform import system
+
+if system() != "Windows":
+    try:
+        from shlex import quote as shell_quote  # Python 3
+    except ImportError:
+        from pipes import quote as shell_quote  # Python 2
+else:
+    from subprocess import list2cmdline
+    def shell_quote(s):
+        # shlex.quote/pipes.quote is not compatible with Windows
+        return list2cmdline([s])
+
 from django.core.exceptions import ImproperlyConfigured
 from django.core.files.temp import NamedTemporaryFile
-from django.utils.importlib import import_module
+
 from django.utils.encoding import smart_text
 from django.utils import six
+
+from compressor.cache import cache, get_precompiler_cachekey
 
 from compressor.conf import settings
 from compressor.exceptions import FilterError
@@ -25,8 +41,15 @@ class FilterBase(object):
     Subclasses should implement `input` and/or `output` methods which must
     return a string (unicode under python 2) or raise a NotImplementedError.
     """
-    def __init__(self, content, filter_type=None, filename=None, verbose=0,
-                 charset=None):
+
+    # Since precompiling moves files around, it breaks url()
+    # statements in css files. therefore we run the absolute and relative filter
+    # on precompiled css files even if compression is disabled.
+    # This flag allows those filters to do so.
+    run_with_compression_disabled = False
+
+    def __init__(self, content, attrs=None, filter_type=None, filename=None,
+                 verbose=0, charset=None, **kwargs):
         self.type = filter_type or getattr(self, 'type', None)
         self.content = content
         self.verbose = verbose or settings.COMPRESS_VERBOSE
@@ -66,7 +89,7 @@ class CallbackOutputFilter(FilterBase):
         try:
             mod_name, func_name = get_mod_func(self.callback)
             func = getattr(import_module(mod_name), func_name)
-        except ImportError:
+        except (ImportError, TypeError):
             if self.dependencies:
                 if len(self.dependencies) == 1:
                     warning = "dependency (%s) is" % self.dependencies[0]
@@ -99,8 +122,8 @@ class CompilerFilter(FilterBase):
     options = ()
     default_encoding = settings.FILE_CHARSET
 
-    def __init__(self, content, command=None, *args, **kwargs):
-        super(CompilerFilter, self).__init__(content, *args, **kwargs)
+    def __init__(self, content, command=None, **kwargs):
+        super(CompilerFilter, self).__init__(content, **kwargs)
         self.cwd = None
 
         if command:
@@ -111,7 +134,7 @@ class CompilerFilter(FilterBase):
         if isinstance(self.options, dict):
             # turn dict into a tuple
             new_options = ()
-            for item in kwargs.items():
+            for item in self.options.items():
                 new_options += (item,)
             self.options = new_options
 
@@ -123,6 +146,7 @@ class CompilerFilter(FilterBase):
         self.infile = self.outfile = None
 
     def input(self, **kwargs):
+
         encoding = self.default_encoding
         options = dict(self.options)
 
@@ -150,6 +174,12 @@ class CompilerFilter(FilterBase):
             ext = self.type and ".%s" % self.type or ""
             self.outfile = NamedTemporaryFile(mode='r+', suffix=ext)
             options["outfile"] = self.outfile.name
+
+        # Quote infile and outfile for spaces etc.
+        if "infile" in options:
+            options["infile"] = shell_quote(options["infile"])
+        if "outfile" in options:
+            options["outfile"] = shell_quote(options["outfile"])
 
         try:
             command = self.command.format(**options)
@@ -188,5 +218,26 @@ class CompilerFilter(FilterBase):
                 self.infile.close()
             if self.outfile is not None:
                 self.outfile.close()
-
         return smart_text(filtered)
+
+
+class CachedCompilerFilter(CompilerFilter):
+
+    def __init__(self, mimetype, *args, **kwargs):
+        self.mimetype = mimetype
+        super(CachedCompilerFilter, self).__init__(*args, **kwargs)
+
+    def input(self, **kwargs):
+        if self.mimetype in settings.COMPRESS_CACHEABLE_PRECOMPILERS:
+            key = self.get_cache_key()
+            data = cache.get(key)
+            if data is not None:
+                return smart_text(data)
+            filtered = super(CachedCompilerFilter, self).input(**kwargs)
+            cache.set(key, filtered, settings.COMPRESS_REBUILD_TIMEOUT)
+            return filtered
+        else:
+            return super(CachedCompilerFilter, self).input(**kwargs)
+
+    def get_cache_key(self):
+        return get_precompiler_cachekey(self.command, self.content)

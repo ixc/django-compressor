@@ -1,3 +1,5 @@
+import sys
+
 from django.utils import six
 from django.utils.encoding import smart_text
 
@@ -5,9 +7,16 @@ from compressor.exceptions import ParserError
 from compressor.parser import ParserBase
 
 
+# Since Python 3.4, the HTMLParser constructor takes a 'convert_charrefs'
+# argument which raises a warning if we don't pass it.
+HTML_PARSER_ARGS = {}
+if sys.version_info[:2] >= (3, 4):
+    HTML_PARSER_ARGS['convert_charrefs'] = False
+
+
 class DefaultHtmlParser(ParserBase, six.moves.html_parser.HTMLParser):
     def __init__(self, content):
-        six.moves.html_parser.HTMLParser.__init__(self)
+        six.moves.html_parser.HTMLParser.__init__(self, **HTML_PARSER_ARGS)
         self.content = content
         self._css_elems = []
         self._js_elems = []
